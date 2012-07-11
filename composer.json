@@ -1,0 +1,6 @@
+{
+    "name" : "ajbdev/twigjspackagist",
+    "description" : "Twig.js is a pure JavaScript implementation of the Twig PHP templating language (http://twig.sensiolabs.org/)",
+    "keywords" : ["twig","javascript"],
+    "homepage" : "https://github.com/justjohn/twig.js/wiki"
+}
