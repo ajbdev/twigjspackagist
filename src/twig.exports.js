@@ -107,12 +107,13 @@ var Twig = (function (Twig) {
             sep_chr = '/',
             path = options.filename,
             template;
-
+            
         // Try to load the template from the cache
         template = new Twig.Template({
             data: markup,
             path: path,
-            id: id
+            id: id,
+            options: options.settings['twig options']
         }); // Twig.Templates.load(id) ||
 
         return function(context) {
@@ -133,13 +134,25 @@ var Twig = (function (Twig) {
         if ('function' == typeof options) {
             fn = options, options = {};
         }
-        Twig.exports.twig({
-            path: path,
-            load: function(template) {
-                // render and return template
-                fn(null, template.render(options));
+        
+        var view_options = options.settings['twig options'],
+            option,
+            params = {
+                path: path,
+                load: function(template) {
+                    // render and return template
+                    fn(null, template.render(options));
+                }
+            };
+        
+        // mixin any options provided to the express app.
+        if (view_options) {
+            for (option in view_options) {
+                params[option] = view_options[option];
             }
-        });
+        }
+        
+        Twig.exports.twig(params);
     };
     Twig.exports.__express = Twig.exports.renderFile;
 

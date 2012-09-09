@@ -15,6 +15,10 @@ var Twig = (function (Twig) {
     // Default caching to true for the improved performance it offers
     Twig.cache = true;
 
+    Twig.placeholders = {
+        parent: "{{|PARENT|}}"
+    };
+
     /**
      * Exception thrown by twig.js.
      */
@@ -1976,23 +1980,30 @@ var Twig = (function (Twig) {
             },
             parse: function (token, context, chain) {
                 var block_output = "",
-                    output = "";
+                    output = "",
+                    hasParent = this.blocks[token.block] && this.blocks[token.block].indexOf(Twig.placeholders.parent) > -1;
 
                 // Don't override previous blocks
-                if (this.blocks[token.block] === undefined) {
+                if (this.blocks[token.block] === undefined || hasParent) {
                     block_output = Twig.expression.parse.apply(this, [{
                         type: Twig.expression.type.string,
                         value: Twig.parse.apply(this, [token.output, context])
                     }, context]);
 
-                    this.blocks[token.block] = block_output;
+                    if (hasParent) {
+                        this.blocks[token.block] =  this.blocks[token.block].replace(Twig.placeholders.parent, block_output);
+                    } else {
+                        this.blocks[token.block] = block_output;
+                    }
                 }
-
+                        
                 // This is the base template -> append to output
                 if ( this.extend === null ) {
+                
                     // Check if a child block has been set from a template extending this one.
                     if (this.child.blocks[token.block]) {
                         output = this.child.blocks[token.block];
+                        
                     } else {
                         output = this.blocks[token.block];
                     }
@@ -3953,6 +3964,10 @@ var Twig = (function (Twig) {
                 throw new Twig.Error("Unable to parse date " + date);
             }
             return dateObj;
+        },
+        parent: function() {
+            // Add a placeholder
+            return Twig.placeholders.parent;
         }
     };
 
@@ -4141,12 +4156,13 @@ var Twig = (function (Twig) {
             sep_chr = '/',
             path = options.filename,
             template;
-
+            
         // Try to load the template from the cache
         template = new Twig.Template({
             data: markup,
             path: path,
-            id: id
+            id: id,
+            options: options.settings['twig options']
         }); // Twig.Templates.load(id) ||
 
         return function(context) {
@@ -4167,13 +4183,25 @@ var Twig = (function (Twig) {
         if ('function' == typeof options) {
             fn = options, options = {};
         }
-        Twig.exports.twig({
-            path: path,
-            load: function(template) {
-                // render and return template
-                fn(null, template.render(options));
+        
+        var view_options = options.settings['twig options'],
+            option,
+            params = {
+                path: path,
+                load: function(template) {
+                    // render and return template
+                    fn(null, template.render(options));
+                }
+            };
+        
+        // mixin any options provided to the express app.
+        if (view_options) {
+            for (option in view_options) {
+                params[option] = view_options[option];
             }
-        });
+        }
+        
+        Twig.exports.twig(params);
     };
     Twig.exports.__express = Twig.exports.renderFile;
 
